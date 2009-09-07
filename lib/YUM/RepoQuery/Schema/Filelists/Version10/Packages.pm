@@ -19,6 +19,11 @@ __PACKAGE__->set_primary_key("pkgkey");
 # Created by DBIx::Class::Schema::Loader v0.04005 @ 2008-10-19 15:35:42
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:9bYaI4VWfGTT8cDGXuSvYQ
 
+__PACKAGE__->has_many(
+    'filelist',
+    'YUM::RepoQuery::Schema::Filelists::Version10::Filelist',
+    { 'foreign.pkgkey' => 'self.pkgkey' },
+);
 
-# You can replace this text with custom content, and it will be preserved on regeneration
+
 1;

@@ -23,5 +23,10 @@ __PACKAGE__->add_columns(
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:211xYQ4F4i5bzle5VCtaIA
 
 
-# You can replace this text with custom content, and it will be preserved on regeneration
+__PACKAGE__->belongs_to(
+    'package',
+    'YUM::RepoQuery::Schema::Filelists::Version10::Packages',
+    { 'foreign.pkgkey' => 'self.pkgkey' },
+);
+
 1;

@@ -67,6 +67,34 @@ __PACKAGE__->set_primary_key("pkgkey");
 # Created by DBIx::Class::Schema::Loader v0.04005 @ 2008-10-19 14:13:35
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:jzPfyo9a92RM6o6qfe1ZVg
 
+__PACKAGE__->has_many(
+    'provides',
+    'YUM::RepoQuery::Schema::Primary::Version10::Provides',
+    { 'foreign.pkgkey' => 'self.pkgkey' },
+);
 
-# You can replace this text with custom content, and it will be preserved on regeneration
+__PACKAGE__->has_many(
+    'requires',
+    'YUM::RepoQuery::Schema::Primary::Version10::Requires',
+    { 'foreign.pkgkey' => 'self.pkgkey' },
+);
+
+__PACKAGE__->has_many(
+    'obsoletes',
+    'YUM::RepoQuery::Schema::Primary::Version10::Obsoletes',
+    { 'foreign.pkgkey' => 'self.pkgkey' },
+);
+
+__PACKAGE__->has_many(
+    'files',
+    'YUM::RepoQuery::Schema::Primary::Version10::Files',
+    { 'foreign.pkgkey' => 'self.pkgkey' },
+);
+
+__PACKAGE__->has_many(
+    'conflicts',
+    'YUM::RepoQuery::Schema::Primary::Version10::Conflicts',
+    { 'foreign.pkgkey' => 'self.pkgkey' },
+);
+
 1;

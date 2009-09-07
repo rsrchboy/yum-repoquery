@@ -1,5 +1,12 @@
 Revision history for YUM-RepoQuery
 
+0.1.1 Mon Oct 27 2008
+- add table relationships.  Nothing too exciting.
+
+0.1.0   Sun Oct 19 2008
+- refactor to pull metadata/data from repos directly, and use with versioned
+  DBIC schema
+
 0.0.4   Thu Sep 18 20:35:33 PDT 2008
 - correct yr/cu issue packages' default constructor
 

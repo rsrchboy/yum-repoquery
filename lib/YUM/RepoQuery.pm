@@ -15,7 +15,7 @@ use Moose;
 use MooseX::AttributeHelpers;
 use MooseX::Types::URI qw{ Uri };
 
-our $VERSION = '0.1.0';
+our $VERSION = '0.1.1';
 
 use English '-no_match_vars';
 
@@ -162,7 +162,8 @@ sub _fetch_db {
     my $mdinfo = $self->repomd->{$mdkey} 
         or confess "repomd doesn't contain any info about $mdkey";
 
-    my $db_loc_uri = $self->uri . '/' . $mdinfo->{location}->{href};
+    #my $db_loc_uri = $self->uri . '/' . $mdinfo->{location}->{href};
+    my $db_loc_uri = $self->uri . $mdinfo->{location}->{href};
     my $db_fn = $self->repo_dir . "/$name.sqlite";
 
     # see if we have a cached copy; if so, if it's new enough
@@ -193,7 +194,7 @@ sub _fetch {
     my $rsp = URI::Fetch->fetch($uri);
 
     # FIXME could probably do with some more error checking here
-    confess URI::Fetch->errstr unless $rsp;
+    confess(URI::Fetch->errstr) unless $rsp;
 
     return $rsp->content;
 }
