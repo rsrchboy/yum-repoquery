@@ -1,0 +1,29 @@
+#!/usr/bin/perl
+#
+# Little scriptie to help create our db schema definitions as needed.
+#
+# Chris Weyl <cweyl@alumni.drew.edu> 2008
+
+use warnings;
+use strict;
+
+die "Must pass type (primary, etc) and version (10, 11, etc)!\n"
+    unless $ARGV[0] && $ARGV[1];
+
+my $type = lc $ARGV[0];
+my $vers = $ARGV[1];
+
+die "$type.sqlite does not exist or is not readable!\n"
+    unless -r "$type.sqlite";
+
+my $class = 'YUM::RepoQuery::Schema::' . ucfirst $type . "::Version$vers";
+
+use DBIx::Class::Schema::Loader qw{ make_schema_at dump_to_dir:../lib };
+
+make_schema_at(
+    $class,
+    { debug => 1, components => [ 'InflateColumn::DateTime' ] }, 
+    [ "dbi:SQLite:$type.sqlite", undef, undef                 ],
+);
+
+print "\n\nDumped schema to $class\n";

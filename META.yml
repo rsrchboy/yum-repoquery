@@ -3,7 +3,10 @@ abstract: 'Query a YUM repository for package information '
 author:
   - 'Chris Weyl <cweyl@alumni.drew.edu>'
 build_requires:
+  File::Find::Rule: 0
+  Test::DBICSchemaLoaderDigest: 0
   Test::More: 0
+  ok: 0
 distribution_type: module
 generated_by: 'Module::Install version 0.77'
 license: lgpl
@@ -16,6 +19,14 @@ no_index:
     - inc
     - t
 requires:
+  DBIx::Class: 0
+  File::Find::Rule: 0
+  File::Slurp: 0
+  File::Temp: 0
+  IO::Uncompress::Bunzip2: 0
   Moose: 0
   MooseX::AttributeHelpers: 0
-version: 0.0.4
+  MooseX::Types::URI: 0
+  URI::Fetch: 0
+  XML::Simple: 0
+version: 0.1.0

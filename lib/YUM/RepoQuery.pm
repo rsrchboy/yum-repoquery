@@ -13,57 +13,190 @@ package YUM::RepoQuery;
 
 use Moose;
 use MooseX::AttributeHelpers;
+use MooseX::Types::URI qw{ Uri };
 
-our $VERSION = '0.0.4';
+our $VERSION = '0.1.0';
+
+use English '-no_match_vars';
+
+use File::Find::Rule;
+use File::Slurp;
+use File::stat;
+use File::Temp qw{ tempdir };
+use IO::Uncompress::Bunzip2 qw{ bunzip2 };
+use URI::Fetch;
+use XML::Simple;
 
 # FIXME -- should be a URI type
-has uri => (isa => 'Str', is  => 'ro', required => 1);
 has id  => (is => 'ro', isa => 'Str', required => 1);
 
-has packages => (
-    metaclass => 'Collection::Hash',
-    is        => 'ro',
-    isa       => 'HashRef[HashRef]',
-    lazy      => 1,
+has uri => (isa => Uri, is  => 'ro', required => 1, coerce => 1);
+
+has cache_dir => (
+    is      => 'ro',
+    isa     => 'Str',
+    builder => '_build_cache_dir',
+);
+
+sub _build_cache_dir {
+    my $self = shift @_;
+
+    my $name = getpwuid($EUID);
+
+    # look for an existing one
+    my @dirs = File::Find::Rule
+        ->directory
+        ->name("yum-$name-*")
+        ->maxdepth(1)
+        ->in('/var/tmp')
+        ;
+    
+    # find any, return the last one
+    return pop @dirs 
+        if @dirs > 0;
+
+    # else create it
+    return tempdir "yum-$name-XXXXXX", DIR => '/var/tmp';
+}
+
+has repo_dir => (
+    is => 'ro',
+    isa => 'Str',
+    lazy_build => 1,
+);
+
+sub _build_repo_dir {
+    my $self = shift @_;
+
+    my $repo_dir = $self->cache_dir . '/' . $self->id;
+
+    mkdir $repo_dir
+        unless -d $repo_dir;
+
+    return $repo_dir;
+}
+
+has repomd => (
+    is  => 'ro',
+    isa => 'HashRef',
+    lazy_build => 1,
+);
+
+sub _build_repomd {
+    my $self = shift @_;
+
+    # fetch repomd.xml...
+    my $xmlstr = $self->_fetch($self->uri . 'repodata/repomd.xml');
+
+    # write it out...
+    write_file $self->repo_dir . '/repomd.xml', { atomic => 1}, $xmlstr;
+
+    # now, convert to a hashref and return the interesting bits...
+    return XMLin($xmlstr, KeyAttr => 'type')->{data};
+}
+
+has primary => (
+    is => 'ro',
+    isa => 'YUM::RepoQuery::Schema::Primary',
+    lazy_build => 1,
+);
+sub _build_primary { shift->_fetch_db('primary') }
+    
+has other => (
+    is => 'ro',
+    isa => 'YUM::RepoQuery::Schema::Other',
+    lazy_build => 1,
+);
+sub _build_other { shift->_fetch_db('other') }
+    
+has filelists => (
+    is => 'ro',
+    isa => 'YUM::RepoQuery::Schema::Filelists',
+    lazy_build => 1,
+);
+sub _build_filelists { shift->_fetch_db('filelists') }
+
+
+# note we do this as a hash as it makes 'exists' easier :-)
+has _packages => (
+    metaclass  => 'Collection::Hash',
+    is         => 'ro',
+    isa        => 'HashRef[Str]',
+    lazy_build => 1,
 
     provides => {
-        get   => 'package_summary',
-        count => 'num_packages',
-    },
-
-    # fetch and parse
-    default => sub {  
-        my $self = shift @_;
-
-        my @fields = 
-            qw/epoch ver rel arch summary url license group buildtime/;
-
-        my $split = sub {
-            my @parts = split /:/, shift @_; 
-            my $name = shift @parts;
-            return ($name => { map { $_ => shift @parts } @fields });
-        };
-
-        my $cmd = 'repoquery -a --repofrompath=yr'
-            . $self->id . ',' . $self->uri
-            . ' --repoid=yr' . $self->id 
-            . ' --archlist=i386,src'
-            . ' --qf "%{name}:%{epoch}:%{ver}:%{rel}:%{arch}:%{summary}'
-            . ':%{url}:%{license}:%{group}:%{buildtime}"'
-            #. ' --qf "%{name}:%{epoch}:%{ver}:%{rel}:%{arch}"'
-            #. ' --qf "%{name}:%{ver}:%{rel}:%{arch}"'
-            ;
-
-        my @output = `$cmd`;
-
-        # get rid of the 'Adding repo...'
-        shift @output;
-
-        my %pkgs = map { chomp; $split->($_) } @output;
-
-        return \%pkgs;
+        count  => 'package_count',
+        exists => 'has_package',
+        keys   => 'packages',
     },
 );
+
+sub _build__packages {
+    my $self = shift @_;
+
+    my %pkgs = map { $_ => 1 }
+        $self->primary->resultset('Packages')->get_column('name')->all
+        ;
+
+    return \%pkgs;
+}
+
+sub get_package { 
+    my $self = shift @_;
+    my $name = shift @_ || confess 'Must provide package name!';
+
+    return $self
+        ->primary
+        ->resultset('Packages')
+        ->search({ name => $name })
+        ->first
+        ;
+}
+
+sub _fetch_db {
+    my $self = shift @_;
+    my $name = shift @_ || confess "Must pass the db data name to fetch";
+
+    # we could check to make sure we know how to handle it, but for now... 
+    my $mdkey  = $name . '_db';
+    my $mdinfo = $self->repomd->{$mdkey} 
+        or confess "repomd doesn't contain any info about $mdkey";
+
+    my $db_loc_uri = $self->uri . '/' . $mdinfo->{location}->{href};
+    my $db_fn = $self->repo_dir . "/$name.sqlite";
+
+    # see if we have a cached copy; if so, if it's new enough
+    if (! -e $db_fn || stat($db_fn)->mtime != $mdinfo->{timestamp}) {
+
+        # fetch the file.
+        my $db_cache = $self->_fetch($db_loc_uri);
+
+        # and write out, bunzip2ing as we go...
+        bunzip2 \$db_cache => $db_fn
+            or confess "bunzip2 error: $IO::Uncompress::Bzip2::Bunzip2error";
+    }
+
+    # now, figure out what class to load and create our schema object...
+    our $class = 'YUM::RepoQuery::Schema::' 
+        . ucfirst $name . '::Version' . $mdinfo->{database_version};
+
+    eval "use $class";
+    confess "Cannot use $class: $@" if $@;
+
+    return $class->connect("dbi:SQLite:$db_fn");
+}
+
+sub _fetch {    
+    my $self = shift @_;
+    my $uri  = shift @_ || confess 'Must pass a uri';
+
+    my $rsp = URI::Fetch->fetch($uri);
+
+    # FIXME could probably do with some more error checking here
+    confess URI::Fetch->errstr unless $rsp;
+
+    return $rsp->content;
+}
 
 __PACKAGE__->meta->make_immutable;
 
@@ -94,47 +227,70 @@ YUM::RepoQuery takes the URI to a package repository with YUM metadata, and
 allows one to query what packages, and versions of those packages, are
 available in that repo.
 
-Right now we use the 'repoquery' command included with the yum package to do
-most of the hard work -- that is, to pull down and parse the YUM metadata.
-
 WARNING: This is a very early, primitive package.  "Release early, release
 often", right? :)
 
-
 =head1 INTERFACE 
 
-=head2 Attributes 
+"Release Early, Release Often"
 
-=head3 id
+There's a bunch more that we can do here (not the least of which is
+documentation!).  As I get time, I'll be updating and adding more; please feel
+free to drop a line with patches / requests either at my email or (preferably)
+at this module's rt tracker address (L<bug-yum-repoquery@rt.cpan.org>).
 
-Required.  A short tag used to id this particular repo; mainly used when
-talking to repoquery.
+=head2 METHODS
 
-=head3 uri
+=over 4
 
-Required.  The URI of the repository we want to query.
+=item B<new()>
 
-=head2 Repository Data
+Standard constructor.  Takes a number of arguments, two of which are
+required:
 
-=head3 package_summary
+=over 4 
 
-Get a hashref referring to a specific package's info.  e.g.
+=item I<id>
 
-    my $data = $repo->package('Moose');
-    # $data is
-    # {
-    #   epoch => undef,
-    #   ver   => 0.57,
-    #   rel   => '1.fc10',
-    #   arch  => 'noarch',
-    #   url   => 'http://search.cpan.org/dist/Moose',
-    #   ...
-    # }
+(Required) The id one refers to this repo as.  Used mainly in looking for
+existing yum cache directories under /var/tmp/.
 
-=head3 num_packages
+=item I<uri>
+
+(Required) The URI of the repository.
+
+=back
+
+=item B<primary>
+
+The DBIx::Class schema corresponding to this repository's primary.sqlite.
+
+=item B<other>
+
+The DBIx::Class schema corresponding to this repository's other.sqlite.
+
+=item B<filelists>
+
+The DBIx::Class schema corresponding to this repository's filelists.sqlite.
+
+=item B<packages>
+
+An array of all packages in this repo.
+
+=item B<package_count>
 
 Returns the count of all packages in this repository.
 
+=item B<has_package (str)>
+
+When called with a package name, returns true if that package exists in this
+repository.
+
+=item B<get_package (str)>
+
+Given a package name, returns the row object corresponding to it.
+
+=back 
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
@@ -169,7 +325,7 @@ L<http://rt.cpan.org>.
 Chris Weyl  C<< <cweyl@alumni.drew.edu> >>
 
 
-=head1 LICENCE AND COPYRIGHT
+=head1 LICENSE AND COPYRIGHT
 
 Copyright (c) 2008, Chris Weyl C<< <cweyl@alumni.drew.edu> >>.
 
