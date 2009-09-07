@@ -14,7 +14,7 @@ package YUM::RepoQuery;
 use Moose;
 use MooseX::AttributeHelpers;
 
-our $VERSION = '0.0.3';
+our $VERSION = '0.0.4';
 
 # FIXME -- should be a URI type
 has uri => (isa => 'Str', is  => 'ro', required => 1);
@@ -44,7 +44,7 @@ has packages => (
             return ($name => { map { $_ => shift @parts } @fields });
         };
 
-        my $cmd = 'repoquery -a --repofrompath=cu'
+        my $cmd = 'repoquery -a --repofrompath=yr'
             . $self->id . ',' . $self->uri
             . ' --repoid=yr' . $self->id 
             . ' --archlist=i386,src'
