@@ -1,0 +1,8 @@
+*.bak
+*.orig
+*.gz
+*.tar
+META.yml
+inc/
+blib/
+Makefile

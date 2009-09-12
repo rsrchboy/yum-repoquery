@@ -1,5 +1,7 @@
 use inc::Module::Install;
 
+githubmeta;
+
 name     'YUM-RepoQuery';
 all_from 'lib/YUM/RepoQuery.pm';
 author   'Chris Weyl <cweyl@alumni.drew.edu>';
@@ -24,7 +26,6 @@ test_requires 'Test::DBICSchemaLoaderDigest';
 test_requires 'Test::More';
 test_requires 'ok';
 
-githubmeta;
 auto_provides;
 auto_install;
 extra_tests;
