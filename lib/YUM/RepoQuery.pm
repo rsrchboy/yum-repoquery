@@ -13,11 +13,10 @@ package YUM::RepoQuery;
 
 use Moose;
 use MooseX::AttributeHelpers;
-use MooseX::AlwaysCoerce;
 use MooseX::Types::URI         ':all';
 use MooseX::Types::Path::Class ':all';
 
-our $VERSION = '0.1.1';
+our $VERSION = '0.1.2';
 
 use English '-no_match_vars';
 
@@ -68,7 +67,6 @@ sub _build_repo_dir {
 }
 
 has repomd => (
-    traits => [ 'Hash' ],
     is  => 'ro',
     isa => 'HashRef',
     lazy_build => 1,

@@ -1,5 +1,8 @@
 Revision history for YUM-RepoQuery
 
+0.1.2 Fri Sep 11 2009
+- metadata updates, mainly
+
 0.1.1 Mon Oct 27 2008
 - add table relationships.  Nothing too exciting.
 
