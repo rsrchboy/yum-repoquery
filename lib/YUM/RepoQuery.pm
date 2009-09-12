@@ -13,7 +13,9 @@ package YUM::RepoQuery;
 
 use Moose;
 use MooseX::AttributeHelpers;
-use MooseX::Types::URI qw{ Uri };
+use MooseX::AlwaysCoerce;
+use MooseX::Types::URI         ':all';
+use MooseX::Types::Path::Class ':all';
 
 our $VERSION = '0.1.1';
 
@@ -24,19 +26,19 @@ use File::Slurp;
 use File::stat;
 use File::Temp qw{ tempdir };
 use IO::Uncompress::Bunzip2 qw{ bunzip2 };
+use Path::Class qw{ file dir };
 use URI::Fetch;
 use XML::Simple;
+
+use namespace::clean -except => 'meta';
 
 # FIXME -- should be a URI type
 has id  => (is => 'ro', isa => 'Str', required => 1);
 
 has uri => (isa => Uri, is  => 'ro', required => 1, coerce => 1);
 
-has cache_dir => (
-    is      => 'ro',
-    isa     => 'Str',
-    builder => '_build_cache_dir',
-);
+has repo_dir  => (is => 'ro', isa => Dir, lazy_build => 1, coerce => 1);
+has cache_dir => (is => 'ro', isa => Dir, lazy_build => 1, coerce => 1);
 
 sub _build_cache_dir {
     my $self = shift @_;
@@ -51,32 +53,22 @@ sub _build_cache_dir {
         ->in('/var/tmp')
         ;
     
-    # find any, return the last one
-    return pop @dirs 
-        if @dirs > 0;
-
-    # else create it
+    # find any, return the last one else create it
+    return pop @dirs if @dirs > 0;
     return tempdir "yum-$name-XXXXXX", DIR => '/var/tmp';
 }
-
-has repo_dir => (
-    is => 'ro',
-    isa => 'Str',
-    lazy_build => 1,
-);
 
 sub _build_repo_dir {
     my $self = shift @_;
 
-    my $repo_dir = $self->cache_dir . '/' . $self->id;
-
-    mkdir $repo_dir
-        unless -d $repo_dir;
+    my $repo_dir = dir $self->cache_dir, $self->id;
+    $repo_dir->mkpath unless $repo_dir->stat;
 
     return $repo_dir;
 }
 
 has repomd => (
+    traits => [ 'Hash' ],
     is  => 'ro',
     isa => 'HashRef',
     lazy_build => 1,
@@ -85,36 +77,22 @@ has repomd => (
 sub _build_repomd {
     my $self = shift @_;
 
-    # fetch repomd.xml...
+    # fetch and write repomd.xml...
     my $xmlstr = $self->_fetch($self->uri . 'repodata/repomd.xml');
-
-    # write it out...
-    write_file $self->repo_dir . '/repomd.xml', { atomic => 1}, $xmlstr;
+    write_file file($self->repo_dir, 'repomd.xml'), { atomic => 1}, $xmlstr;
 
     # now, convert to a hashref and return the interesting bits...
     return XMLin($xmlstr, KeyAttr => 'type')->{data};
 }
 
-has primary => (
-    is => 'ro',
-    isa => 'YUM::RepoQuery::Schema::Primary',
-    lazy_build => 1,
-);
-sub _build_primary { shift->_fetch_db('primary') }
-    
-has other => (
-    is => 'ro',
-    isa => 'YUM::RepoQuery::Schema::Other',
-    lazy_build => 1,
-);
-sub _build_other { shift->_fetch_db('other') }
-    
-has filelists => (
-    is => 'ro',
-    isa => 'YUM::RepoQuery::Schema::Filelists',
-    lazy_build => 1,
-);
+has primary   => (is => 'ro', lazy_build => 1, isa => 'YUM::RepoQuery::Schema::Primary');
+has other     => (is => 'ro', lazy_build => 1, isa => 'YUM::RepoQuery::Schema::Other');
+has filelists => (is => 'ro', lazy_build => 1, isa => 'YUM::RepoQuery::Schema::Filelists');
+
+sub _build_primary   { shift->_fetch_db('primary') }
+sub _build_other     { shift->_fetch_db('other') }
 sub _build_filelists { shift->_fetch_db('filelists') }
+
 
 
 # note we do this as a hash as it makes 'exists' easier :-)
@@ -164,12 +142,13 @@ sub _fetch_db {
 
     #my $db_loc_uri = $self->uri . '/' . $mdinfo->{location}->{href};
     my $db_loc_uri = $self->uri . $mdinfo->{location}->{href};
-    my $db_fn = $self->repo_dir . "/$name.sqlite";
+    my $db_fn = file $self->repo_dir, "$name.sqlite";
 
     # see if we have a cached copy; if so, if it's new enough
-    if (! -e $db_fn || stat($db_fn)->mtime != $mdinfo->{timestamp}) {
+    #if (! $db_fn->stat || $db_fn->stat->mtime != $mdinfo->{timestamp}) {
+    if (!$db_fn->stat || $db_fn->stat->mtime < $mdinfo->{timestamp}) {
 
-        # fetch the file.
+        # fetch the file
         my $db_cache = $self->_fetch($db_loc_uri);
 
         # and write out, bunzip2ing as we go...
@@ -349,3 +328,4 @@ along with this library; if not, write to the
     Boston, MA  02111-1307 USA
 
 
+# vim:textwidth=96:

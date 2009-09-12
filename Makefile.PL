@@ -4,27 +4,30 @@ name     'YUM-RepoQuery';
 all_from 'lib/YUM/RepoQuery.pm';
 author   'Chris Weyl <cweyl@alumni.drew.edu>';
 
-# our perl requires
-test_requires 'File::Find::Rule';
-test_requires 'Test::DBICSchemaLoaderDigest';
-test_requires 'Test::More';
-test_requires 'ok';
+requires 'namespace::clean' => '0.11';
+
+requires 'Moose';
+requires 'MooseX::AttributeHelpers' => '0.21';
+requires 'MooseX::Types::Path::Class';
+requires 'MooseX::Types::URI';
 
 requires 'DBIx::Class';
 requires 'File::Find::Rule';
 requires 'File::Slurp';
 requires 'File::Temp';
 requires 'IO::Uncompress::Bunzip2';
-requires 'Moose';
-requires 'MooseX::AttributeHelpers';
-requires 'MooseX::Types::URI';
+requires 'Path::Class' => '0.16';
 requires 'URI::Fetch';
 requires 'XML::Simple';
 
-# extra author tests 
-extra_tests;
+test_requires 'Test::DBICSchemaLoaderDigest';
+test_requires 'Test::More';
+test_requires 'ok';
 
+githubmeta;
+auto_provides;
 auto_install;
+extra_tests;
 
 WriteAll;
 
