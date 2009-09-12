@@ -16,13 +16,18 @@ my $vers = $ARGV[1];
 die "$type.sqlite does not exist or is not readable!\n"
     unless -r "$type.sqlite";
 
-my $class = 'YUM::RepoQuery::Schema::' . ucfirst $type . "::Version$vers";
+my $class = 'YUM::RepoQuery::' . ucfirst $type . "::Version${vers}::Schema";
 
 use DBIx::Class::Schema::Loader qw{ make_schema_at dump_to_dir:../lib };
 
 make_schema_at(
     $class,
-    { debug => 1, components => [ 'InflateColumn::DateTime' ] }, 
+    { 
+        debug => 1, 
+        components => [ 'InflateColumn::DateTime' ], 
+        #resultset_namespace => '
+        use_namespaces => 1,
+    }, 
     [ "dbi:SQLite:$type.sqlite", undef, undef                 ],
 );
 
