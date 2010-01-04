@@ -43,13 +43,13 @@ role {
     has $name  => (is => 'ro', lazy_build => 1, isa => $class);
     has $dbatt => (is => 'ro', lazy_build => 1, isa => File);
 
-    method "mdinfo_$name" => sub { shift->mdinfo->{$mdkey} };
+    method "mdinfo_$name" => sub { shift->repomd->{$mdkey} };
 
     method "precise_class_$name" => sub {
 
         return 'YUM::RepoQuery::Schema::'
                 . ucfirst $name . '::Version'
-                . shift->mdinfo->{$mdkey}->{database_version}
+                . shift->repomd->{$mdkey}->{database_version}
                 ;
     };
 
