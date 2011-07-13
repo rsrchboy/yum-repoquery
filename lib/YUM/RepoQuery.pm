@@ -1,22 +1,11 @@
-#############################################################################
-#
-# Query YUM repositories for package information.
-#
-# Detailed documentation on this package can be found at the end of this
-# file.
-#
-# Copyright (c) Chris Weyl <cweyl@alumni.drew.edu> 2008, 2009
-#
-#############################################################################
-
 package YUM::RepoQuery;
+
+# ABSTRACT: Query a YUM repository for package information
 
 use Moose;
 use MooseX::AttributeHelpers;
 use MooseX::Types::URI         ':all';
 use MooseX::Types::Path::Class ':all';
-
-our $VERSION = '0.1.2';
 
 use English '-no_match_vars';
 
@@ -173,11 +162,6 @@ __PACKAGE__->meta->make_immutable;
 
 __END__
 
-=head1 NAME
-
-YUM::RepoQuery - Query a YUM repository for package information
-
-
 =head1 SYNOPSIS
 
     use YUM::RepoQuery;
@@ -261,22 +245,6 @@ Given a package name, returns the row object corresponding to it.
 
 =back
 
-=head1 CONFIGURATION AND ENVIRONMENT
-
-YUM::RepoQuery requires no configuration files or environment variables.
-
-
-=head1 DEPENDENCIES
-
-YUM::RepoQuery requires Moose, MooseX::AttributeHelpers, and the external
-executable 'repoquery'.
-
-
-=head1 INCOMPATIBILITIES
-
-None known.
-
-
 =head1 BUGS AND LIMITATIONS
 
 No bugs have been reported.
@@ -288,33 +256,5 @@ Please report any bugs or feature requests to
 C<bug-yum-repoquery@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org>.
 
-
-=head1 AUTHOR
-
-Chris Weyl  C<< <cweyl@alumni.drew.edu> >>
-
-
-=head1 LICENSE AND COPYRIGHT
-
-Copyright (c) 2008, Chris Weyl C<< <cweyl@alumni.drew.edu> >>.
-
-This library is free software; you can redistribute it and/or modify it under
-the terms of the GNU Lesser General Public License as published by the Free
-Software Foundation; either version 2.1 of the License, or (at your option)
-any later version.
-
-This library is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-OR A PARTICULAR PURPOSE.
-
-See the GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with this library; if not, write to the
-
-    Free Software Foundation, Inc.,
-    59 Temple Place, Suite 330,
-    Boston, MA  02111-1307 USA
-
-
+=cut
 # vim:textwidth=96:
