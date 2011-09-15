@@ -43,6 +43,7 @@ role {
     method "_build_$name"  => sub {
         my $self = shift @_;
 
+        Class::MOP::load_class($self->$precise_class);
         $self->$precise_class->connect('dbi:SQLite:' . $self->$dbatt);
     };
 };

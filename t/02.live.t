@@ -9,7 +9,7 @@ use YUM::RepoQuery;
 
 my $repo = YUM::RepoQuery->new(
     id  => 'F-9', 
-    uri => 'http://mirrors.kernel.org/fedora/updates/9/SRPMS.newkey/',
+    uri => 'http://archives.fedoraproject.org/pub/archive/fedora/linux/updates/9/SRPMS.newkey/',
 );
 
 isa_ok($repo, 'YUM::RepoQuery');
