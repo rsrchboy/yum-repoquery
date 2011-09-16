@@ -2,6 +2,10 @@ Revision history for YUM-RepoQuery
 
 {{$NEXT}}
 
+0.002     2011-09-16 10:50:26 America/Los_Angeles
+- address RT#69126, #69127, #69124
+- drop MX::AttributeHelpers in favor of native traits
+
 0.1.2 Fri Sep 11 2009
 - metadata updates, mainly
 

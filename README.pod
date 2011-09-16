@@ -1,0 +1,115 @@
+=pod
+
+=head1 NAME
+
+YUM::RepoQuery - Query a YUM repository for package information
+
+=head1 VERSION
+
+version 0.002
+
+=head1 SYNOPSIS
+
+    use YUM::RepoQuery;
+
+    my $repo = YUM::RepoQuery->new(
+        # short tag to id the repo with
+        id  => 'f9-updates-src'
+        # uri to the repository
+        uri => 'ftp://mirrors.kernel.org/fedora/updates/9/SRPMS',
+    );
+
+=head1 DESCRIPTION
+
+YUM::RepoQuery takes the URI to a package repository with YUM metadata, and
+allows one to query what packages, and versions of those packages, are
+available in that repo.
+
+WARNING: This is a very early, primitive package.  "Release early, release
+often", right? :)
+
+=head1 INTERFACE
+
+"Release Early, Release Often"
+
+There's a bunch more that we can do here (not the least of which is
+documentation!).  As I get time, I'll be updating and adding more; please feel
+free to drop a line with patches / requests either at my email or (preferably)
+at this module's rt tracker address (L<bug-yum-repoquery@rt.cpan.org>).
+
+=head2 METHODS
+
+=over 4
+
+=item B<new()>
+
+Standard constructor.  Takes a number of arguments, two of which are
+required:
+
+=over 4
+
+=item I<id>
+
+(Required) The id one refers to this repo as.  Used mainly in looking for
+existing yum cache directories under /var/tmp/.
+
+=item I<uri>
+
+(Required) The URI of the repository.
+
+=back
+
+=item B<primary>
+
+The DBIx::Class schema corresponding to this repository's primary.sqlite.
+
+=item B<other>
+
+The DBIx::Class schema corresponding to this repository's other.sqlite.
+
+=item B<filelists>
+
+The DBIx::Class schema corresponding to this repository's filelists.sqlite.
+
+=item B<packages>
+
+An array of all packages in this repo.
+
+=item B<package_count>
+
+Returns the count of all packages in this repository.
+
+=item B<has_package (str)>
+
+When called with a package name, returns true if that package exists in this
+repository.
+
+=item B<get_package (str)>
+
+Given a package name, returns the row object corresponding to it.
+
+=back
+
+=head1 BUGS AND LIMITATIONS
+
+No bugs have been reported.
+
+There's a lot of room for improvement here; a better set of accessors + tests
+would certainly be nice.
+
+Please report any bugs or feature requests to
+C<bug-yum-repoquery@rt.cpan.org>, or through the web interface at
+L<http://rt.cpan.org>.
+
+=head1 AUTHOR
+
+Chris Weyl <cweyl@alumni.drew.edu>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is Copyright (c) 2011 by Chris Weyl.
+
+This is free software, licensed under:
+
+  The GNU Lesser General Public License, Version 2.1, February 1999
+
