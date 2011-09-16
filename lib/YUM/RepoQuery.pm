@@ -3,7 +3,6 @@ package YUM::RepoQuery;
 # ABSTRACT: Query a YUM repository for package information
 
 use Moose;
-use MooseX::AttributeHelpers;
 use MooseX::Types::URI         ':all';
 use MooseX::Types::Path::Class ':all';
 
@@ -82,15 +81,17 @@ sub _build_repomd {
 
 # note we do this as a hash as it makes 'exists' easier :-)
 has _packages => (
-    metaclass  => 'Collection::Hash',
+
+    traits     => [ 'Hash' ],
     is         => 'ro',
     isa        => 'HashRef[Str]',
     lazy_build => 1,
 
-    provides => {
-        count  => 'package_count',
-        exists => 'has_package',
-        keys   => 'packages',
+    handles => {
+
+        package_count => 'count',
+        has_package   => 'exists',
+        packages      => 'keys',
     },
 );
 
